@@ -1,0 +1,3 @@
+CHAT_IDS = {}
+LOGS_CHANNEL = -100 #int
+SESSION_STRING = ""
