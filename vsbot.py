@@ -1,19 +1,14 @@
 import asyncio
-
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 from telethon.tl.types import Message
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from uuid import uuid4
-
 from settings import *
 
 ############## Client Setup ###############
 
-# user_bot = TelegramClient(StringSession(SESSION_STRING), 6, "eb06d4abfb49dc3eeb1aeb98ae0f581e")
 user_bot = TelegramClient(StringSession(SESSION_STRING), 27447487, "012b94d5275b4b0b3da9df20955159ac")
 sch = AsyncIOScheduler()
-loop = asyncio.get_event_loop()
 
 
 async def start_bot() -> None:
@@ -22,13 +17,7 @@ async def start_bot() -> None:
     print(user_bot.me.username, "is Online Now.")
 
 
-loop.run_until_complete(start_bot())
-
-
-async def main_task(
-    source_chat: int,
-    views: int,
-) -> None:
+async def main_task(source_chat: int, views: int) -> None:
     if not user_bot.is_connected():
         await user_bot.connect()
     if not (source_chat and views):
@@ -46,27 +35,33 @@ async def main_task(
                 await z.delete()
                 await asyncio.sleep(1)
                 f += 1
-            except BaseException:
-                pass
-        except BaseException:
-            pass
-    print(f"Succesfully Checked {title}")
+            except Exception as e:
+                print(f"Error deleting message: {e}")
+        except Exception as e:
+            print(f"Error processing message: {e}")
+    print(f"Successfully Checked {title}")
     await user_bot.send_message(
         LOGS_CHANNEL,
         f"**{title}**\n\n**Total Checked:** `{r} Posts`\n**Total Deleted:** `{f} Posts`",
     )
 
 
-############## Event Handlers ###############
-
 async def do_task():
-    for chat_id in CHAT_IDS.keys():
-        data = CHAT_IDS[chat_id]
+    for chat_id, data in CHAT_IDS.items():
         try:
             sch.add_job(main_task, "interval", minutes=data[1], args=(int(chat_id), int(data[0])))
+            print(f"Job added for chat_id {chat_id}")
         except Exception as er:
-            print(er)
+            print(f"Error adding job for chat_id {chat_id}: {er}")
 
-loop.run_until_complete(do_task())
-sch.start()
-user_bot.run_until_disconnected()
+
+async def main():
+    await start_bot()
+    await do_task()
+    sch.start()
+    await user_bot.run_until_disconnected()
+
+
+# Start the event loop
+if __name__ == "__main__":
+    asyncio.run(main())
